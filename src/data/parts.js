@@ -7,14 +7,14 @@ export const SPEC = [
 ];
 
 export const GROUPS = [
-  { id: 'fuselage', name: '机身', color: '#7fb2ff' },
-  { id: 'wing', name: '机翼与舵面', color: '#8fe3c0' },
-  { id: 'engine', name: '动力装置', color: '#ffc46b' },
-  { id: 'tail', name: '尾翼', color: '#c9a6ff' },
-  { id: 'gear', name: '起落架', color: '#ff9d8a' },
-  { id: 'structure', name: '内部结构', color: '#9fb0c4' },
-  { id: 'cabin', name: '客舱与货舱', color: '#f7a6d0' },
-  { id: 'systems', name: '机载系统', color: '#7fe0f0' },
+  { id: 'fuselage', name: '机身', color: '#AEB7C4' },
+  { id: 'wing', name: '机翼与舵面', color: '#9FBFB2' },
+  { id: 'engine', name: '动力装置', color: '#D9A98B' },
+  { id: 'tail', name: '尾翼', color: '#B3A9C6' },
+  { id: 'gear', name: '起落架', color: '#C4A996' },
+  { id: 'structure', name: '内部结构', color: '#8F98A5' },
+  { id: 'cabin', name: '客舱与货舱', color: '#C4A2B0' },
+  { id: 'systems', name: '机载系统', color: '#94B6BF' },
 ];
 
 // n 中文名 / e 英文名 / g 分组 / d 说明 / f 关键数据 / t 小知识 / hot: 1 外部标注 2 内部标注 / v 建议观察模式

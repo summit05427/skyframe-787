@@ -132,7 +132,7 @@ export function createStage(container) {
   composer.addPass(new RenderPass(scene, camera));
   const outlineSel = new OutlinePass(size, scene, camera);
   outlineSel.edgeStrength = 4.5; outlineSel.edgeGlow = 0.35; outlineSel.edgeThickness = 1.6; outlineSel.pulsePeriod = 0;
-  outlineSel.visibleEdgeColor.set(0x35c8ff); outlineSel.hiddenEdgeColor.set(0x1a5d86);
+  outlineSel.visibleEdgeColor.set(0xff5a6a); outlineSel.hiddenEdgeColor.set(0x8c1f2c);
   const outlineHover = new OutlinePass(size, scene, camera);
   outlineHover.edgeStrength = 2.6; outlineHover.edgeGlow = 0.0; outlineHover.edgeThickness = 1.0;
   outlineHover.visibleEdgeColor.set(0xffffff); outlineHover.hiddenEdgeColor.set(0x56606c);

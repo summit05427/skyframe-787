@@ -67,8 +67,10 @@ const pad = { l: 0, r: 0 };
 const freeAspect = () => Math.max(0.35, (innerWidth - pad.l - pad.r) / innerHeight);
 function layoutView() {
   const W = innerWidth, H = innerHeight, touring = document.body.classList.contains('touring');
-  pad.l = W >= 1180 && !touring ? 264 : 0;
-  pad.r = W > 820 && !(touring && !S.selected) ? 340 : 0;
+  const noL = document.body.classList.contains('no-left');
+  const noR = document.body.classList.contains('no-right');
+  pad.l = W >= 1180 && !touring && !noL ? 264 : 0;
+  pad.r = W > 820 && !(touring && !S.selected) && !noR ? 340 : 0;
   camera.setViewOffset(W, H, (pad.r - pad.l) / 2, touring ? 85 : W > 820 ? 14 : 40, W, H);
 }
 function homeCam() {
@@ -81,7 +83,7 @@ function fitCam(c) {
   const k = clamp(1.62 / freeAspect(), 1, 2.4);
   return [c[3] + (c[0] - c[3]) * k, c[4] + (c[1] - c[4]) * k, c[5] + (c[2] - c[5]) * k, c[3], c[4], c[5]];
 }
-addEventListener('resize', layoutView);
+addEventListener('resize', () => { layoutView(); syncConsole(); });
 
 function partBox(id) {
   const objs = aircraft.reg.objectsOf(id);
@@ -183,7 +185,7 @@ const dimLabels = [];
   dim([-25.09, y, 8], [0.74, y, 8], 'dim.wheelbase', [0, 0, -5]);
   dim([-9.7, y, 9.91], [-9.7, y, 0], 'dim.engine');
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  const ln = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xffc46b, transparent: true, opacity: 0.9, fog: false }));
+  const ln = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xff8b96, transparent: true, opacity: 0.9, fog: false }));
   ln.userData.noPick = true; dimsG.add(ln);
 }
 
@@ -193,26 +195,34 @@ const ICON = {
   home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>',
   tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>',
   ruler: '<svg viewBox="0 0 24 24"><path d="M2 8h20v8H2zM6 8v4M10 8v3M14 8v4M18 8v3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
-  sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>',
   help: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm.2 15.6h-1.7v-1.7h1.7zm1.9-6.4c-.9.7-1.6 1.2-1.6 2.6h-1.7c0-2 .9-2.8 1.8-3.5.7-.5 1.2-.9 1.2-1.7 0-.9-.7-1.5-1.7-1.5-1.1 0-1.8.7-1.9 1.8H8.5c.1-2 1.5-3.3 3.6-3.3 2 0 3.4 1.2 3.4 3 0 1.4-.7 2-1.4 2.6z"/></svg>',
   list: '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5.9 1.2.9 1.9V16h5.2v-.2c0-.7.3-1.4.9-1.9A6 6 0 0 0 12 3z"/></svg>',
 };
 $('#ui').innerHTML = `
 <header id="top">
   <button class="tool only-narrow" id="btn-list" title="${t('partListTitle')}">${ICON.list}</button>
-  <div class="brand"><b>${t('brand')}</b><span>${t('brandSub')}</span></div>
-  <nav id="modes">${MODES.map(m => `<button data-mode="${m.id}" title="${t(`modeHint.${m.id}`)} · ${m.key}">${t(`mode.${m.id}`)}</button>`).join('')}</nav>
+  <nav id="modes">${MODES.map(m => `<button data-mode="${m.id}" title="${t(`mode.${m.id}`)} · ${m.key}">${t(`mode.${m.id}`)}</button>`).join('')}</nav>
   <div id="tools">
     <button class="tool cta" id="btn-tour" title="${t('tourTitle')}">${ICON.tour}<span>${t('tour')}</span></button>
     <button class="tool" id="btn-labels" title="${t('labelsTitle')}">${ICON.tag}</button>
     <button class="tool" id="btn-dims" title="${t('dimsTitle')}">${ICON.ruler}</button>
-    <button class="tool" id="btn-theme" title="${t('themeTitle')}">${ICON.sun}</button>
+    <div class="tool seg-switch" id="seg-theme" role="group" title="${t('themeTitle')}" aria-label="${t('themeTitle')}">
+      <button type="button" data-theme-val="studio" aria-pressed="true">${t('theme.studio')}</button>
+      <button type="button" data-theme-val="day" aria-pressed="false">${t('theme.day')}</button>
+    </div>
     <button class="tool" id="btn-home" title="${t('homeTitle')}">${ICON.home}</button>
-    <button class="tool" id="btn-lang" title="${t('langTitle')}">${t('langLabel')}</button>
+    <div class="tool seg-switch" id="seg-lang" role="group" title="${t('langTitle')}" aria-label="${t('langTitle')}">
+      <button type="button" data-lang="zh" aria-pressed="true">中</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
     <button class="tool" id="btn-help" title="${t('helpTitle')}">${ICON.help}</button>
   </div>
 </header>
 <div id="modebar"></div>
+<button class="panel-handle" id="tgl-left" aria-controls="left" title="${t('collapseLeft')}" aria-label="${t('collapseLeft')}">${ICON.chev}</button>
+<button class="panel-handle flip" id="tgl-right" aria-controls="right" title="${t('collapseRight')}" aria-label="${t('collapseRight')}">${ICON.chev}</button>
 <aside id="left" class="panel">
   <div class="search"><input id="q" type="search" placeholder="${t('searchPlaceholder')}" autocomplete="off"></div>
   <div id="tree"></div>
@@ -221,10 +231,10 @@ $('#ui').innerHTML = `
 <section id="console" class="panel">
   <div class="tabs">
     <button data-tab="fly">${t('tab.fly')}</button><button data-tab="anim">${t('tab.anim')}</button><button data-tab="view">${t('tab.view')}</button>
-    <span class="grow"></span><button id="btn-min" title="${t('panelMinTitle')}">▾</button>
   </div>
   <div id="pane"></div>
 </section>
+<button class="panel-handle" id="tgl-console" aria-controls="console" title="${t('collapseConsole')}" aria-label="${t('collapseConsole')}">${ICON.chev}</button>
 <div id="tourcard" class="panel" hidden></div>
 <div id="tip" hidden></div>
 <div id="toast" hidden></div>
@@ -267,7 +277,7 @@ function renderInfo() {
     <h2>${esc(partName(p))}</h2><div class="en">${esc(partAltName(p))}</div>
     <p>${esc(p.d)}</p>
     ${p.f ? `<dl class="facts">${p.f.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
-    ${p.t ? `<div class="tipbox"><b>${t('didYouKnow')}</b>${esc(p.t)}</div>` : ''}
+    ${p.t ? `<div class="tipbox"><b>${ICON.bulb}${t('didYouKnow')}</b>${esc(p.t)}</div>` : ''}
     <div class="acts"><button id="act-focus">${t('focus')}</button><button id="act-iso" class="${S.isolate ? 'on' : ''}">${S.isolate ? t('showAll') : t('isolate')}</button>${p.v && S.mode === 'ext' ? `<button id="act-xray">${t('xrayView')}</button>` : ''}</div>
     <div class="foot">${t('instances', { n })}</div>`;
   $('#info-x').onclick = () => select(null);
@@ -302,24 +312,29 @@ function select(id, o = {}) {
 
 // ------------------------------------------------------------------ 模式附加控件
 function renderModeBar() {
-  const bar = $('#modebar'), m = MODES.find(x => x.id === S.mode);
-  let h = `<span class="hint">${t(`modeHint.${m.id}`)}</span>`;
+  const bar = $('#modebar');
+  let h = '';   // 外观/透视不需要附加提示，保持画面干净
   if (S.mode === 'cut') {
     const c = CUT[S.cutAxis];
     h = `<div class="seg">${Object.keys(CUT).map(a => `<button data-axis="${a}" class="${a === S.cutAxis ? 'on' : ''}">${t(`cutAxis.${a}`)}</button>`).join('')}</div>
-      <label class="sl wide"><span>${t('cutPos')}</span><input id="cutk" type="range" min="${c.min}" max="${c.max}" step="0.05" value="${S.cutK}"><output>${(+S.cutK).toFixed(1)} m</output></label>`;
+      <label class="sl wide"><span>${t('cutPos')}</span><input id="cutk" type="range" min="${c.min}" max="${c.max}" step="0.05" value="${S.cutK}" style="--p:${(((S.cutK - c.min) / (c.max - c.min)) * 100).toFixed(1)}%"><output>${(+S.cutK).toFixed(1)} m</output></label>`;
   } else if (S.mode === 'explode') {
-    h = `<label class="sl wide"><span>${t('explodeAmount')}</span><input id="expk" type="range" min="0" max="1" step="0.01" value="${S.explodeK}"><output>${Math.round(S.explodeK * 100)}%</output></label>`;
+    h = `<label class="sl wide"><span>${t('explodeAmount')}</span><input id="expk" type="range" min="0" max="1" step="0.01" value="${S.explodeK}" style="--p:${(S.explodeK * 100).toFixed(1)}%"><output>${Math.round(S.explodeK * 100)}%</output></label>`;
   } else if (S.mode === 'material') {
     h = `<div class="legend">${Object.entries(MATERIAL_CLASSES).map(([key, c]) => `<span><i style="background:#${c.color.toString(16).padStart(6, '0')}"></i>${classLabel(key)}</span>`).join('')}</div>
       <div class="share">${shareRows().map(([key, pc, tip]) => `<i title="${esc(tip)}" style="flex:${pc};background:#${MATERIAL_CLASSES[key].color.toString(16).padStart(6, '0')}">${pc}%</i>`).join('')}</div><span class="hint">${t('materialWeight')}</span>`;
   }
   bar.innerHTML = h;
   bar.dataset.mode = S.mode;
+  bar.hidden = !h;
+  // 提示条隐藏时，toast 上移，避免留出空档
+  document.body.classList.toggle('no-modebar', !h);
 }
 $('#modebar').addEventListener('input', e => {
-  if (e.target.id === 'cutk') { S.cutK = +e.target.value; applyCut(); e.target.nextElementSibling.textContent = S.cutK.toFixed(1) + ' m'; }
-  if (e.target.id === 'expk') { S.explodeK = +e.target.value; aircraft.tgt.explode = S.explodeK; e.target.nextElementSibling.textContent = Math.round(S.explodeK * 100) + '%'; }
+  const i = e.target;
+  if (i.type === 'range') i.style.setProperty('--p', (((i.value - i.min) / (i.max - i.min)) * 100).toFixed(1) + '%');
+  if (i.id === 'cutk') { S.cutK = +i.value; applyCut(); i.nextElementSibling.textContent = S.cutK.toFixed(1) + ' m'; }
+  if (i.id === 'expk') { S.explodeK = +i.value; aircraft.tgt.explode = S.explodeK; i.nextElementSibling.textContent = Math.round(S.explodeK * 100) + '%'; }
 });
 $('#modebar').addEventListener('click', e => {
   const b = e.target.closest('[data-axis]'); if (!b) return;
@@ -352,28 +367,48 @@ const TG = {
   labels: { key: 'tg.labels', get: () => S.labels, set: on => { S.labels = on; } },
   dims: { key: 'tg.dims', get: () => S.dims, set: on => { S.dims = on; dimsG.visible = on && !S.flight; } },
 };
-const slHtml = (k) => { const s = SL[k], v = s.get(); return `<label class="sl"><span>${t(s.key)}</span><input type="range" data-sl="${k}" min="${s.min}" max="${s.max}" step="${s.step}" value="${v}"><output>${s.fmt(v)}</output></label>`; };
+const slHtml = (k) => {
+  const s = SL[k], v = s.get();
+  const pct = s.max > s.min ? ((v - s.min) / (s.max - s.min)) * 100 : 0;
+  return `<label class="sl"><span>${t(s.key)}</span><input type="range" data-sl="${k}" min="${s.min}" max="${s.max}" step="${s.step}" value="${v}" style="--p:${pct.toFixed(1)}%"><output${v >= s.max ? ' class="ext"' : ''}>${s.fmt(v)}</output></label>`;
+};
 const tgHtml = (k) => { const item = TG[k], on = item.get(); return `<button class="tg${on ? ' on' : ''}" data-tg="${k}"><i></i><span>${t(item.key)}</span>${item.onKey ? `<em>${t(on ? item.onKey : item.offKey)}</em>` : ''}</button>`; };
 function renderPane() {
   let h = '';
-  if (S.tab === 'fly') h = `<div class="grid">${['flaps', 'speedbrake', 'roll', 'pitch', 'yaw', 'trim'].map(slHtml).join('')}</div><button class="ghost" id="btn-center">${t('centerControls')}</button>`;
-  if (S.tab === 'anim') h = `<div class="row">${['gear', 'n1', 'rev', 'rat', 'flight'].map(tgHtml).join('')}</div><div class="row sub"><b>${t('lightsLabel')}</b>${['beacon', 'strobe', 'nav', 'landing'].map(tgHtml).join('')}</div>`;
-  if (S.tab === 'view') h = `<div class="row"><b>${t('layersLabel')}</b>${LAYERS.map(k => `<button class="tg${S.layers[k] ? ' on' : ''}" data-layer="${k}"><i></i><span>${t(`layer.${k}`)}</span></button>`).join('')}</div>
-    <div class="row sub">${tgHtml('labels')}${tgHtml('dims')}<div class="grid one">${slHtml('wdim')}</div></div>`;
+  if (S.tab === 'fly') h = `<div class="ctl-grid">${['flaps', 'speedbrake', 'roll', 'pitch', 'yaw', 'trim'].map(slHtml).join('')}</div>
+    <button class="ghost wide" id="btn-center">${t('centerControls')}</button>`;
+  if (S.tab === 'anim') h = `<div class="ctl-cols">
+      <div class="ctl-block"><b>${t('sysLabel')}</b><div class="chips">${['gear', 'n1', 'rev', 'rat', 'flight'].map(tgHtml).join('')}</div></div>
+      <div class="ctl-block"><b>${t('lightsLabel')}</b><div class="chips">${['beacon', 'strobe', 'nav', 'landing'].map(tgHtml).join('')}</div></div>
+    </div>`;
+  if (S.tab === 'view') h = `<div class="ctl-cols">
+      <div class="ctl-block"><b>${t('layersLabel')}</b><div class="chips">${LAYERS.map(k => `<button class="tg${S.layers[k] ? ' on' : ''}" data-layer="${k}"><i></i><span>${t(`layer.${k}`)}</span></button>`).join('')}</div></div>
+      <div class="ctl-block"><b>${t('labelsLabel')}</b><div class="chips">${tgHtml('labels')}${tgHtml('dims')}</div>
+        <div class="wdim-wrap">${slHtml('wdim')}</div></div>
+    </div>`;
   $('#pane').innerHTML = h;
   $$('#console .tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   $('#btn-labels').classList.toggle('on', S.labels); $('#btn-dims').classList.toggle('on', S.dims);
+  syncConsole();
 }
 $('#console').addEventListener('input', e => {
   const k = e.target.dataset.sl; if (!k) return;
-  const v = +e.target.value; SL[k].set(v); e.target.nextElementSibling.textContent = SL[k].fmt(v);
+  const s = SL[k], v = +e.target.value; s.set(v);
+  // 已滑过部分用猩红细线填充；数值仅在到达最大值（满行程）时转红
+  e.target.style.setProperty('--p', (((v - s.min) / (s.max - s.min)) * 100).toFixed(1) + '%');
+  const out = e.target.nextElementSibling;
+  out.textContent = s.fmt(v);
+  out.classList.toggle('ext', v >= s.max);
 });
 $('#console').addEventListener('click', e => {
-  const tab = e.target.closest('[data-tab]'); if (tab) { S.tab = tab.dataset.tab; $('#console').classList.remove('min'); renderPane(); return; }
+  const tab = e.target.closest('[data-tab]'); if (tab) {
+    S.tab = tab.dataset.tab;
+    if (document.body.classList.contains('console-min')) { document.body.classList.remove('console-min'); }
+    renderPane(); return;
+  }
   const tg = e.target.closest('[data-tg]'); if (tg) { const item = TG[tg.dataset.tg]; item.set(!item.get()); renderPane(); return; }
   const ly = e.target.closest('[data-layer]'); if (ly) { const k = ly.dataset.layer; S.layers[k] = !S.layers[k]; refreshVis(); renderPane(); return; }
   if (e.target.id === 'btn-center') { T.roll = T.pitch = T.yaw = T.trim = 0; T.speedbrake = 0; renderPane(); }
-  if (e.target.id === 'btn-min') $('#console').classList.toggle('min');
 });
 function resetControls() {
   Object.assign(T, { flaps: 0, speedbrake: 0, roll: 0, pitch: 0, yaw: 0, trim: 0, gear: 0, reverser: 0, n1: 0, rat: 0, flex: 0 });
@@ -385,7 +420,7 @@ let tourLoop = 0;
 function tourGo(i) {
   if (i < 0 || i >= TOUR.length) return tourEnd();
   S.tour = i; const st = TOUR[i];
-  document.body.classList.add('touring'); $('#console').classList.add('min');
+  document.body.classList.add('touring'); document.body.classList.add('console-min'); syncConsole();
   clearInterval(tourLoop);
   resetControls(); Object.assign(T, st.set || {});
   if (st.loop) {                      // 循环演示：在两个状态间来回切换（如起落架收放）
@@ -414,7 +449,7 @@ function renderTourCard(i) {
 }
 function tourEnd() {
   clearInterval(tourLoop);
-  S.tour = -1; $('#tourcard').hidden = true; document.body.classList.remove('touring'); $('#console').classList.remove('min'); layoutView();
+  S.tour = -1; $('#tourcard').hidden = true; document.body.classList.remove('touring'); document.body.classList.remove('console-min'); layoutView(); syncConsole();
 }
 
 // ------------------------------------------------------------------ 标注热点
@@ -540,17 +575,86 @@ function goHome() {
 }
 let toastT = 0;
 function toast(msg) { const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
+
+// 双段控件：把“当前值”直接显示为高亮段，避免此前图标/文本表达歧义
+function syncThemeSeg() {
+  $$('#seg-theme [data-theme-val]').forEach(b => {
+    const on = b.dataset.themeVal === stage.theme;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function syncLangSeg() {
+  const cur = isEn() ? 'en' : 'zh';
+  $$('#seg-lang [data-lang]').forEach(b => {
+    const on = b.dataset.lang === cur;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function applyTheme(name) {
+  if (name !== 'studio' && name !== 'day') return;
+  if (stage.theme !== name) {
+    stage.setTheme(name);
+    dimsG.children[0].material.color.set(name === 'day' ? 0x8c1f2c : 0xff8b96);   // 浅色地面上尺寸线改用深红
+    toast(name === 'day' ? t('toast.themeDay') : t('toast.themeStudio'));
+  }
+  syncThemeSeg();
+}
+$('#seg-theme').addEventListener('click', e => {
+  const b = e.target.closest('[data-theme-val]');
+  if (b) applyTheme(b.dataset.themeVal);
+});
+$('#seg-lang').addEventListener('click', e => {
+  const b = e.target.closest('[data-lang]');
+  if (b) setLocale(b.dataset.lang);
+});
+
+// 左右面板折叠：收起后为画面让出空间，并同步相机取景偏移与手柄方向
+function syncPanels() {
+  const noL = document.body.classList.contains('no-left');
+  const noR = document.body.classList.contains('no-right');
+  const l = $('#tgl-left'), r = $('#tgl-right');
+  l.classList.toggle('flip', noL);
+  r.classList.toggle('flip', !noR);
+  l.title = t(noL ? 'expandLeft' : 'collapseLeft');
+  l.setAttribute('aria-label', l.title);
+  l.setAttribute('aria-expanded', String(!noL));
+  r.title = t(noR ? 'expandRight' : 'collapseRight');
+  r.setAttribute('aria-label', r.title);
+  r.setAttribute('aria-expanded', String(!noR));
+}
+function togglePanel(side) {
+  document.body.classList.toggle(`no-${side}`);
+  syncPanels();
+  layoutView();
+  syncConsole();   // 侧栏收起后控制台会重新居中，折叠手柄跟着移动
+}
+$('#tgl-left').onclick = () => togglePanel('left');
+$('#tgl-right').onclick = () => togglePanel('right');
+
+// 底部控制台：与左右面板同款折叠手柄，收起后只留边缘抓手
+function syncConsole() {
+  const box = $('#console'), btn = $('#tgl-console');
+  const collapsed = document.body.classList.contains('console-min');
+  const b = box.getBoundingClientRect();
+  const root = document.documentElement.style;
+  root.setProperty('--console-h', (collapsed ? 0 : box.offsetHeight) + 'px');
+  root.setProperty('--console-cx', (b.left + b.width / 2) + 'px');
+  btn.classList.toggle('flip', collapsed);
+  btn.title = t(collapsed ? 'expandConsole' : 'collapseConsole');
+  btn.setAttribute('aria-label', btn.title);
+  btn.setAttribute('aria-expanded', String(!collapsed));
+}
+$('#tgl-console').onclick = () => {
+  document.body.classList.toggle('console-min');
+  syncConsole();
+};
 $('#btn-tour').onclick = () => (S.tour >= 0 ? tourEnd() : tourGo(0));
 $('#btn-labels').onclick = () => { S.labels = !S.labels; renderPane(); };
 $('#btn-dims').onclick = () => { TG.dims.set(!S.dims); renderPane(); if (S.dims) flyTo(fitCam([-62, 50, 70, 0, 2, 0])); };
-$('#btn-theme').onclick = () => {
-  stage.setTheme(stage.theme === 'studio' ? 'day' : 'studio');
-  dimsG.children[0].material.color.set(stage.theme === 'day' ? 0x7a4300 : 0xffc46b);   // 浅色地面上尺寸线改用深琥珀色
-  toast(stage.theme === 'day' ? t('toast.themeDay') : t('toast.themeStudio'));
-};
 $('#btn-home').onclick = goHome;
 $('#btn-list').onclick = () => document.body.classList.toggle('show-left');
-$('#btn-lang').onclick = () => setLocale(isEn() ? 'zh' : 'en');
 
 const HELP_ROWS = [
   ['help.rotate', 'help.rotateDesc'], ['help.zoom', 'help.zoomDesc'], ['help.pan', 'help.panDesc'], ['help.click', 'help.clickDesc'],
@@ -593,29 +697,28 @@ addEventListener('keydown', e => {
 // ------------------------------------------------------------------ 启动
 // 语言切换只重渲染文案层，不重建几何、不丢失当前选中/模式/导览状态。
 function syncShell() {
-  const brand = $('.brand');
-  if (brand) { brand.querySelector('b').textContent = t('brand'); brand.querySelector('span').textContent = t('brandSub'); }
   $$('#modes button').forEach(b => {
     const m = MODES.find(x => x.id === b.dataset.mode);
     b.textContent = t(`mode.${m.id}`);
-    b.title = `${t(`modeHint.${m.id}`)} · ${m.key}`;
+    b.title = `${t(`mode.${m.id}`)} · ${m.key}`;
   });
   const tourBtn = $('#btn-tour'); tourBtn.title = t('tourTitle'); tourBtn.querySelector('span').textContent = t('tour');
   $('#btn-list').title = t('partListTitle');
   $('#btn-labels').title = t('labelsTitle');
   $('#btn-dims').title = t('dimsTitle');
-  $('#btn-theme').title = t('themeTitle');
+  $('#seg-theme').title = t('themeTitle'); $('#seg-theme').setAttribute('aria-label', t('themeTitle'));
+  $$('#seg-theme [data-theme-val]').forEach(b => { b.textContent = t(`theme.${b.dataset.themeVal}`); });
   $('#btn-home').title = t('homeTitle');
-  $('#btn-lang').title = t('langTitle'); $('#btn-lang').textContent = t('langLabel');
+  $('#seg-lang').title = t('langTitle'); $('#seg-lang').setAttribute('aria-label', t('langTitle'));
   $('#btn-help').title = t('helpTitle');
   $('#q').placeholder = t('searchPlaceholder');
-  $('#btn-min').title = t('panelMinTitle');
   $$('#console .tabs [data-tab]').forEach(b => { b.textContent = t(`tab.${b.dataset.tab}`); });
+  syncThemeSeg(); syncLangSeg(); syncPanels();
 }
 
 setWindowDim(S.windowDim);
-renderTree(); renderInfo(); renderPane(); setMode('ext'); buildLabels();
-onLocaleChange(() => {
+syncThemeSeg(); syncLangSeg(); syncPanels();   // 启动时对齐双段控件与折叠手柄状态
+renderTree(); renderInfo(); renderPane(); setMode('ext'); buildLabels();onLocaleChange(() => {
   syncShell();
   renderTree($('#q').value);
   renderInfo();
@@ -630,7 +733,7 @@ onLocaleChange(() => {
   for (const d of dimLabels) if (d.el) d.el.textContent = t(d.key);
   if (S.tour >= 0) renderTourCard(S.tour);
 });
-if (innerWidth <= 820) $('#console').classList.add('min');   // 小屏默认收起控制台，把画面留给模型
+if (innerWidth <= 820) { document.body.classList.add('console-min'); syncConsole(); }   // 小屏默认收起控制台，把画面留给模型
 layoutView(); setCam(...homeCam());
 
 let last = performance.now();
