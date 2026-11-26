@@ -1,0 +1,29 @@
+{
+  "name": "skyframe-787",
+  "version": "1.0.0",
+  "description": "Skyframe 787 — 波音 787-9 交互式结构科普三维模型（中英双语，默认中文）",
+  "private": true,
+  "scripts": {
+    "dev": "node build.mjs --watch",
+    "build": "node build.mjs --min",
+    "serve": "node scripts/serve.mjs"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "boeing-787",
+    "aircraft-structure",
+    "i18n"
+  ],
+  "homepage": "https://summit05427.github.io/skyframe-787/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/summit05427/skyframe-787.git"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}
